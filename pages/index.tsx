@@ -1,6 +1,5 @@
 // app.tsx
 import React, { useState, useEffect, useRef } from "react";
-import * as THREE from "three";
 import SceneWrapper, { SceneWrapperHandle } from "../components/SceneWrapper";
 import { ModelState } from "../components/types";
 import { db } from "../components/firebase";
@@ -20,16 +19,11 @@ export default function App(): React.ReactElement {
   const [mouseContentVisible, setMouseContentVisible] = useState(true);
 const [controlsVisible, setControlsVisible] = useState(true);
 const toggleControls = () => setControlsVisible(!controlsVisible);
-  const [cameraMinimized, setCameraMinimized] = useState(false);
-  const [cameraContentVisible, setCameraContentVisible] = useState(true);
   const sceneRef = useRef<SceneWrapperHandle>(null); // ✅ proper type here
   
   const handleZoomIn = () => sceneRef.current?.zoomCamera(true);
 const handleZoomOut = () => sceneRef.current?.zoomCamera(false);
-const handlePanLeft = () => sceneRef.current?.panCamera("left");
-const handleRotateRight = () => sceneRef.current?.rotateCamera("right");
-  
-  const sceneWrapperRef = useRef<SceneWrapperHandle>(null);
+
   useEffect(() => {
     async function loadModels() {
       try {
@@ -102,16 +96,7 @@ const handleRotateRight = () => sceneRef.current?.rotateCamera("right");
     }
   };
 
-  const toggleCameraControls = () => {
-    if (!cameraMinimized) {
-      setCameraContentVisible(false);
-      setTimeout(() => setCameraMinimized(true), 200);
-    } else {
-      setCameraMinimized(false);
-      setTimeout(() => setCameraContentVisible(true), 300);
-    }
-  };
-
+  
   // Hover styles for buttons
   function onButtonHoverEnter(e: React.MouseEvent<HTMLButtonElement>) {
     e.currentTarget.style.backgroundColor = "#8f1435";
@@ -128,39 +113,7 @@ const handleRotateRight = () => sceneRef.current?.rotateCamera("right");
     e.currentTarget.style.borderColor = "#ccc";
   }
 
-  // Constants for camera movement
-  const MOVE_STEP = 0.5;
-  const ROTATE_STEP = Math.PI / 18; // 10 degrees in radians
-
-  // Camera move handler
-const onMove = (dx: number, dy: number, dz: number) => {
-  const cam = sceneRef.current?.getCamera();
-  if (!cam) return;
-
-  // Promijeni poziciju kamere
-  const newPos: [number, number, number] = [
-    cam.position.x + dx,
-    cam.position.y + dy,
-    cam.position.z + dz,
-  ];
-
-  sceneRef.current?.setCamera({ position: newPos });
-};
-
-// Camera rotate handler (Euler angles in radians)
-const onRotate = (pitch: number, yaw: number, roll: number) => {
-  const cam = sceneRef.current?.getCamera();
-  if (!cam) return;
-
-  // Napravi novi Euler sa povećanjem trenutne rotacije
-  const newRotation: [number, number, number] = [
-    cam.rotation.x + pitch,
-    cam.rotation.y + yaw,
-    cam.rotation.z + roll,
-  ];
-
-  sceneRef.current?.setCamera({ rotation: newRotation });
-};
+ 
 
 
   return (
