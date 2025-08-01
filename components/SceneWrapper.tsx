@@ -133,7 +133,6 @@ type CameraControlParams = {
   zoom?: number;
 };
 
-// Komponenta sa hookovima za kontrolu kamere unutar <Canvas>
 const InnerCameraControls = forwardRef<
   {
     getCamera: () => {
@@ -144,7 +143,7 @@ const InnerCameraControls = forwardRef<
     setCamera: (params: CameraControlParams) => void;
     resetCamera: () => void;
   },
-  {}
+  Record<string, never> // ✅ instead of {}
 >((_, ref) => {
   const { camera } = useThree();
 
@@ -285,7 +284,7 @@ const panCamera = (
   requestAnimationFrame(animate);
 };
 
-
+InnerCameraControls.displayName = "InnerCameraControls";
 const SceneWrapper = forwardRef<SceneWrapperHandle, SceneWrapperProps>(
   (
     { topDown, models, setModels, selectedModelIndex, setSelectedModelIndex },
@@ -306,7 +305,6 @@ const SceneWrapper = forwardRef<SceneWrapperHandle, SceneWrapperProps>(
   const dragOffset = useRef(new THREE.Vector3());
   const [dragging, setDragging] = useState(false);
   const [rotating, setRotating] = useState(false);
-  const isSaving = savingCount > 0;
   const rotationTargets = useRef<(number | null)[]>([]);
     // Ref za InnerCameraControls
 
@@ -463,7 +461,14 @@ case "i":
   zoomCamera: (inOrOut) => {
     if (orbitRef.current) zoomCamera(orbitRef.current, inOrOut);
   },
-      getCamera: () => cameraControlsRef.current?.getCamera()!,
+  
+      getCamera: () => {
+  if (!cameraControlsRef.current) {
+    throw new Error("cameraControlsRef is not available");
+  }
+  return cameraControlsRef.current.getCamera();
+},
+
 
       setCamera: (params: CameraControlParams) =>
         cameraControlsRef.current?.setCamera(params),
@@ -751,7 +756,7 @@ case "i":
             style={{
               position: "absolute",
               bottom: 10,
-              right: 10,
+              left: 230,
               backgroundColor: "rgba(0,0,0,0.7)",
               color: "white",
               padding: "6px 12px",
@@ -859,11 +864,11 @@ case "i":
 
           <DragControls />
 
-          <InnerCameraControls ref={cameraControlsRef} />
+          <InnerCameraControls/>
         </Canvas>
       </div>
     );
   }
 );
-
+SceneWrapper.displayName = "SceneWrapper";
 export default SceneWrapper;
