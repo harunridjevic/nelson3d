@@ -3,13 +3,13 @@ import React, {
   useRef,
   forwardRef,
   useImperativeHandle,
-} from 'react';
-import { useGLTF } from '@react-three/drei';
-import { ThreeEvent } from '@react-three/fiber';
-import * as THREE from 'three';
+} from "react";
+import { useGLTF } from "@react-three/drei";
+import { ThreeEvent } from "@react-three/fiber";
+import * as THREE from "three";
+import { MeshBVH, acceleratedRaycast } from "three-mesh-bvh";
 
-// Import three-mesh-bvh and patch raycast for faster intersection
-import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
+// Patch raycast for faster intersection
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 type Vec3 = [number, number, number];
@@ -21,6 +21,11 @@ interface ModelProps {
   scale?: Vec3;
   onClick?: () => void;
   selected?: boolean;
+  onLoad?: () => void;
+  onPointerDown?: (e: ThreeEvent<PointerEvent>) => void;
+  onPointerMove?: (e: ThreeEvent<PointerEvent>) => void;
+  onPointerUp?: (e: ThreeEvent<PointerEvent>) => void;
+  onContextMenu?: (e: ThreeEvent<MouseEvent>) => void;
 }
 
 const Model = forwardRef<THREE.Object3D, ModelProps>(
@@ -32,13 +37,18 @@ const Model = forwardRef<THREE.Object3D, ModelProps>(
       scale = [1, 1, 1],
       onClick,
       selected = false,
+      onLoad,
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onContextMenu,
     },
     ref
   ) => {
     const { scene } = useGLTF(path);
     const clonedSceneRef = useRef<THREE.Object3D | null>(null);
 
-    // Clone the scene once
+    // Clone scene once
     if (!clonedSceneRef.current) {
       const cloned = scene.clone(true);
 
@@ -51,13 +61,20 @@ const Model = forwardRef<THREE.Object3D, ModelProps>(
             ? mesh.material.map((mat) => mat.clone())
             : mesh.material.clone();
 
-          // Build BVH
+          // Build BVH for faster raycasting
           mesh.geometry.boundsTree = new MeshBVH(mesh.geometry);
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
         }
       });
 
       clonedSceneRef.current = cloned;
     }
+
+    // Notify parent after model is loaded
+    useEffect(() => {
+      onLoad?.();
+    }, [onLoad]);
 
     // Update material color based on selection
     useEffect(() => {
@@ -71,15 +88,15 @@ const Model = forwardRef<THREE.Object3D, ModelProps>(
             : [mesh.material];
 
           materials.forEach((mat) => {
-            if ('color' in mat && mat instanceof THREE.MeshStandardMaterial) {
-              mat.color.set(selected ? 'red' : 'white');
+            if ("color" in mat && mat instanceof THREE.MeshStandardMaterial) {
+              mat.color.set(selected ? "#bb1a31" : "white"); // Use your deep red for selection
             }
           });
         }
       });
     }, [selected]);
 
-    // Expose mesh via ref
+    // Expose object via ref
     useImperativeHandle(ref, () => clonedSceneRef.current as THREE.Object3D, []);
 
     if (!clonedSceneRef.current) return null;
@@ -90,17 +107,21 @@ const Model = forwardRef<THREE.Object3D, ModelProps>(
         position={position}
         rotation={rotation}
         scale={scale}
-        castShadow
-        receiveShadow
         onClick={(e: ThreeEvent<MouseEvent>) => {
           e.stopPropagation();
           onClick?.();
         }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onContextMenu={onContextMenu}
+        castShadow
+        receiveShadow
       />
     );
   }
 );
 
-Model.displayName = 'Model';
+Model.displayName = "Model";
 
 export default Model;
